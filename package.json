@@ -1,0 +1,14 @@
+{
+  "name": "truv-voie-pos-prototype",
+  "version": "1.0.0",
+  "description": "Prototype: custom point-of-sale loan application with embedded Truv VOIE (Verification of Income & Employment) via Embedded Orders",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "verify": "node scripts/verify.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

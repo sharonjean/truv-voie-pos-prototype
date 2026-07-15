@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lakeside Lending — Loan Application</title>
+<!-- Truv Bridge SDK -->
+<script src="https://cdn.truv.com/bridge.js"></script>
+<style>
+  :root {
+    --navy: #12263a; --blue: #1f6feb; --blue-dark: #1857bd;
+    --green: #1a7f4f; --amber: #b3720a; --red: #c0392b;
+    --bg: #f4f6f9; --card: #ffffff; --line: #e3e8ef;
+    --text: #1c2733; --muted: #5c6b7a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--navy); color: #fff; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+  header .brand { font-size: 18px; font-weight: 700; letter-spacing: .3px; }
+  header .brand span { color: #7fb3ff; }
+  header .env { font-size: 12px; background: #2c445e; padding: 4px 10px; border-radius: 999px; }
+  .wrap { max-width: 980px; margin: 28px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+
+  /* Stepper */
+  .stepper { display: flex; gap: 8px; margin-bottom: 18px; grid-column: 1 / -1; }
+  .step { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .step .n { width: 22px; height: 22px; border-radius: 50%; background: var(--line); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .step.active { border-color: var(--blue); color: var(--text); }
+  .step.active .n { background: var(--blue); color: #fff; }
+  .step.done { border-color: var(--green); }
+  .step.done .n { background: var(--green); color: #fff; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+  .card h2 { font-size: 18px; margin-bottom: 4px; }
+  .card p.sub { color: var(--muted); font-size: 13.5px; margin-bottom: 18px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+  input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
+  input:focus { outline: 2px solid #bcd4ff; border-color: var(--blue); }
+  .field { margin-bottom: 4px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; background: var(--blue); color: #fff; border: 0; border-radius: 8px; padding: 12px 22px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 18px; }
+  .btn:hover { background: var(--blue-dark); }
+  .btn:disabled { background: #9db8dd; cursor: default; }
+  .hint { margin-top: 14px; font-size: 12.5px; color: var(--muted); background: #f0f5ff; border: 1px solid #d6e4ff; border-radius: 8px; padding: 10px 12px; }
+  .hint code { background: #e2ecff; padding: 1px 5px; border-radius: 4px; }
+
+  .status-line { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-top: 16px; color: var(--muted); }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .result-tile { border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-top: 12px; }
+  .result-tile h3 { font-size: 15px; margin-bottom: 8px; }
+  .kv { display: grid; grid-template-columns: 160px 1fr; row-gap: 6px; font-size: 13.5px; }
+  .kv .k { color: var(--muted); }
+  .pill { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 3px 10px; }
+  .pill.done { background: #e2f5ea; color: var(--green); }
+  .pill.pending { background: #fdf3e0; color: var(--amber); }
+
+  /* Side panel: behind the scenes */
+  aside .card { padding: 16px; }
+  aside h2 { font-size: 14px; }
+  .log { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; margin-top: 10px; max-height: 420px; overflow-y: auto; }
+  .log .evt { border-left: 3px solid var(--blue); background: #f7f9fc; padding: 7px 9px; border-radius: 0 6px 6px 0; margin-bottom: 7px; word-break: break-all; }
+  .log .evt.webhook { border-left-color: var(--green); }
+  .log .evt .t { color: var(--muted); }
+  a { color: var(--blue); }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Lakeside <span>Lending</span> · Home Loan Application</div>
+  <div class="env">SANDBOX DEMO · Powered by Truv VOIE</div>
+</header>
+
+<div class="wrap">
+  <div class="stepper">
+    <div class="step active" id="stepper-1"><span class="n">1</span> Applicant details</div>
+    <div class="step" id="stepper-2"><span class="n">2</span> Verify income &amp; employment</div>
+    <div class="step" id="stepper-3"><span class="n">3</span> Review results</div>
+  </div>
+
+  <main>
+    <!-- STEP 1 -->
+    <section class="card" id="panel-1">
+      <h2>Tell us about yourself</h2>
+      <p class="sub">This mimics the borrower details step of the point-of-sale flow.</p>
+      <div class="grid2">
+        <div class="field"><label>First name</label><input id="first_name" value="Sharon" /></div>
+        <div class="field"><label>Last name</label><input id="last_name" value="Claitor" /></div>
+        <div class="field"><label>Email</label><input id="email" value="sclaitor@gmail.com" /></div>
+        <div class="field"><label>SSN (last 4)</label><input id="ssn_last4" value="9991" maxlength="4" /></div>
+        <div class="field"><label>Loan number</label><input id="loan_number" value="POS-2026-0714" /></div>
+        <div class="field"><label>Loan amount</label><input value="$425,000" disabled /></div>
+      </div>
+      <button class="btn" onclick="goToVerification()">Continue →</button>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="card" id="panel-2" hidden>
+      <h2>Verify your income &amp; employment</h2>
+      <p class="sub">Connect your payroll account to verify instantly — no paystub uploads needed. We use Truv, a secure verification network.</p>
+      <button class="btn" id="btn-verify" onclick="startVerification()">⚡ Verify with Truv</button>
+      <div class="status-line" id="verify-status" hidden><div class="spinner"></div><span id="verify-status-text">Creating order…</span></div>
+      <div class="hint">Sandbox test login: username <code>goodlogin</code>, password <code>goodpassword</code> (search for any employer, pick "Truv Payroll Provider" if offered).</div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="card" id="panel-3" hidden>
+      <h2>Verification results</h2>
+      <p class="sub">Retrieved server-side from <code>GET /v1/orders/{order_id}/</code> after the order completed.</p>
+      <div class="status-line" id="results-loading"><div class="spinner"></div><span>Waiting for Truv to finish processing…</span></div>
+      <div id="results"></div>
+    </section>
+  </main>
+
+  <aside>
+    <div class="card">
+      <h2>🔍 Behind the scenes</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  let orderId = null;
+  let pollTimer = null;
+  let eventsTimer = null;
+  const seenWebhooks = new Set();
+
+  function log(msg, cls = '') {
+    const el = document.getElementById('log');
+    const d = document.createElement('div');
+    d.className = 'evt ' + cls;
+    d.innerHTML = `<span class="t">${new Date().toLocaleTimeString()}</span> · ${msg}`;
+    el.prepend(d);
+  }
+
+  function setStep(n) {
+    for (let i = 1; i <= 3; i++) {
+      const s = document.getElementById('stepper-' + i);
+      s.classList.toggle('active', i === n);
+      s.classList.toggle('done', i < n);
+      document.getElementById('panel-' + i).hidden = i !== n;
+    }
+  }
+
+  function goToVerification() {
+    setStep(2);
+    log('Borrower reached the VOIE step of the application');
+  }
+
+  async function startVerification() {
+    const btn = document.getElementById('btn-verify');
+    const status = document.getElementById('verify-status');
+    btn.disabled = true;
+    status.hidden = false;
+
+    // 1) Ask OUR backend to create the Truv order (credentials stay server-side)
+    log('POST /api/orders → backend calls Truv POST /v1/orders/');
+    const r = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        first_name: document.getElementById('first_name').value,
+        last_name: document.getElementById('last_name').value,
+        email: document.getElementById('email').value,
+        ssn_last4: document.getElementById('ssn_last4').value,
+        loan_number: document.getElementById('loan_number').value,
+      }),
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      log('❌ Order creation failed: ' + JSON.stringify(e));
+      document.getElementById('verify-status-text').textContent = 'Order creation failed — check server logs.';
+      btn.disabled = false;
+      return;
+    }
+    const order = await r.json();
+    orderId = order.order_id;
+    log(`Order created: <b>${order.order_id}</b> → received <b>bridge_token</b>`);
+    document.getElementById('verify-status-text').textContent = 'Opening Truv Bridge…';
+    startEventsPolling();
+
+    // 2) Launch Truv Bridge in ORDER mode with the bridge_token
+    const bridge = TruvBridge.init({
+      isOrder: true,                     // REQUIRED for Embedded Orders
+      bridgeToken: order.bridge_token,
+      onLoad: () => log('TruvBridge loaded (isOrder: true)'),
+      onSuccess: () => log('Bridge onSuccess — user finished connecting'),
+      onClose: () => {
+        log('Bridge closed');
+        document.getElementById('btn-verify').disabled = false;
+        document.getElementById('verify-status').hidden = true;
+      },
+      onEvent: (type, payload, source) => {
+        log(`Bridge event: <b>${type}</b> (source: ${source || 'widget'})`);
+        // Only advance on COMPLETED with source "order" — tasks may still be
+        // pending after onSuccess/onClose.
+        if (type === 'COMPLETED' && source === 'order') {
+          setStep(3);
+          pollResults();
+        }
+      },
+    });
+    bridge.open();
+  }
+
+  // 3) Poll our backend (which calls GET /v1/orders/{id}/) until data is ready.
+  //    In production the webhook order-status-updated:completed drives this;
+  //    polling here keeps the demo self-contained even without a public URL.
+  async function pollResults() {
+    const r = await fetch('/api/orders/' + orderId);
+    if (!r.ok) { pollTimer = setTimeout(pollResults, 3000); return; }
+    const data = await r.json();
+    renderResults(data);
+    const done = data.employers.length && data.employers.every(e => e.status === 'completed');
+    if (!done) {
+      pollTimer = setTimeout(pollResults, 3000);
+    } else {
+      document.getElementById('results-loading').hidden = true;
+      log('✅ Order completed — verification data retrieved', 'webhook');
+    }
+  }
+
+  function renderResults(data) {
+    const el = document.getElementById('results');
+    if (!data.employers.length) { el.innerHTML = '<p class="sub">No employer connections yet…</p>'; return; }
+    el.innerHTML = data.employers.map(e => `
+      <div class="result-tile">
+        <h3>${e.company_name || 'Employer'} <span class="pill ${e.status === 'completed' ? 'done' : 'pending'}">${e.status}</span></h3>
+        ${(e.employments || []).map(emp => `
+          <div class="kv">
+            <span class="k">Job title</span><span>${emp.job_title ?? '—'}</span>
+            <span class="k">Employment type</span><span>${emp.job_type ?? '—'}</span>
+            <span class="k">Start date</span><span>${emp.start_date ?? '—'}</span>
+            <span class="k">Status</span><span>${emp.end_date ? 'Ended ' + emp.end_date : 'Active'}</span>
+            <span class="k">Income</span><span>${emp.income ? '$' + Number(emp.income).toLocaleString() + ' / ' + (emp.income_unit || '') : '—'}</span>
+            <span class="k">Pay rate</span><span>${emp.pay_rate ?? '—'} ${emp.pay_frequency ? '(' + emp.pay_frequency + ')' : ''}</span>
+            <span class="k">Paystubs on file</span><span>${emp.statements_count}</span>
+            <span class="k">W-2s on file</span><span>${emp.w2s_count}</span>
+          </div>`).join('')}
+        ${e.pdf_report ? `<p style="margin-top:10px;font-size:13px"><a href="${e.pdf_report}" target="_blank">📄 Download verification PDF report</a></p>` : ''}
+      </div>`).join('')
+      + (data.voie_report_id ? `<p style="margin-top:12px;font-size:12.5px;color:var(--muted)">VOIE report ID: <code>${data.voie_report_id}</code></p>` : '');
+  }
+
+  // Webhook feed (server receives them at POST /webhooks/truv)
+  function startEventsPolling() {
+    if (eventsTimer) return;
+    eventsTimer = setInterval(async () => {
+      const r = await fetch('/api/events');
+      if (!r.ok) return;
+      const events = await r.json();
+      events.slice().reverse().forEach(ev => {
+        const key = ev.received_at + ev.event_type + (ev.payload?.task_id || '');
+        if (seenWebhooks.has(key)) return;
+        seenWebhooks.add(key);
+        log(`Webhook: <b>${ev.event_type}</b> status=${ev.status || '—'} (signature ${ev.signature_valid ? 'valid ✓' : 'INVALID ✗'})`, 'webhook');
+      });
+    }, 2500);
+  }
+
+  log('POS loaded — waiting for borrower');
+</script>
+</body>
+</html>
